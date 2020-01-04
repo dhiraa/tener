@@ -1,0 +1,21 @@
+Trainer.dataset_name = "conll2003"
+Trainer.model_name = "vanilla_transformer"
+
+CoNLLDataset.in_data_dir="data/conll/"
+CoNLLDataset.out_data_dir="processed/"
+CoNLLDatasettext_column="0"
+CoNLLDataset.entity_column="3"
+CoNLLDataset.max_length=40
+CoNLLDataset.unknown_word='<UNK>'
+CoNLLDataset.seperator=" "
+CoNLLDataset.quotechar="^"
+CoNLLDataset.batch_size=64
+CoNLLDataset.buffer_size=2000
+
+VanillaTransformerModel.pos_inp_emb_max_index=1000
+VanillaTransformerModel.pos_tar_emb_max_index=1000
+VanillaTransformerModel.num_layers=4
+VanillaTransformerModel.d_model=128
+VanillaTransformerModel.num_heads=8
+VanillaTransformerModel.dff=512
+VanillaTransformerModel.rate=0.1

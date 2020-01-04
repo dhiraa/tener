@@ -1,0 +1,22 @@
+Trainer.dataset_name = "conll2003"
+Trainer.model_name = "tener"
+
+CoNLLDataset.in_data_dir="data/conll/"
+CoNLLDataset.out_data_dir="processed/"
+CoNLLDatasettext_column="0"
+CoNLLDataset.entity_column="3"
+CoNLLDataset.max_length=20
+CoNLLDataset.unknown_word='<UNK>'
+CoNLLDataset.seperator=" "
+CoNLLDataset.quotechar="^"
+CoNLLDataset.batch_size=16
+CoNLLDataset.buffer_size=2000
+
+TenerModel.num_layers=2
+TenerModel.word_d_model=128
+TenerModel.char_d_model=32
+TenerModel.num_heads=8
+TenerModel.dff=512
+TenerModel.rate=0.1
+# naive, adatrans
+TenerModel.attntype="adatrans"
