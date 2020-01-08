@@ -34,6 +34,7 @@ flags.DEFINE_string("config_file", "Google Gin config file format", "/path/to/*.
 
 from tener.misc.pretty_print import print_info, print_error
 
+
 @gin.configurable
 class Trainer:
     def __init__(self,
@@ -69,7 +70,7 @@ class Trainer:
     def train(self):
 
         train_loss = self._model._train_loss
-        train_accuracy = self._model._train_sparse_accuracy
+        train_accuracy = self._model._train_accuracy
 
         current_time = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
         train_log_dir = self._checkpoint_path + current_time+ '/train_logs'
@@ -79,6 +80,34 @@ class Trainer:
 
         step = 0
 
+        # self._model._transformer.build({"word_ids": (None, 32, 32, 3), "char_ids": (None, 32, 32, 3)})
+        # self._model._transformer.compile(optimizer="adam",  # Optimizer
+        #                                  # Loss function to minimize
+        #                                  loss=tf.keras.losses.SparseCategoricalCrossentropy(),
+        #                                  # List of metrics to monitor
+        #                                  metrics=[tf.keras.metrics.SparseCategoricalAccuracy()])
+        #
+        # # x_train, y_train = self._dataset.train_dataset
+        # history = self._model._transformer.fit(self._dataset.train_dataset,
+        #                                        batch_size=None,
+        #                                        epochs=1)
+        #
+        # print_info(self._model._transformer.summary())
+        #
+        # tf.keras.utils.plot_model(
+        #     self._model._transformer,
+        #     to_file='tener_model.png',
+        #     show_shapes=True,
+        #     show_layer_names=True,
+        #     rankdir='TB',
+        #     expand_nested=False,
+        #     dpi=96
+        # )
+        #
+        # exit()
+
+        # https://github.com/tensorflow/datasets/issues/561
+        # https://www.dlology.com/blog/an-easy-guide-to-build-new-tensorflow-datasets-and-estimator-with-keras-model/
         for epoch in tqdm(range(1, self._epochs+1), desc="Epoch"):
 
             start = time.time()
@@ -91,7 +120,7 @@ class Trainer:
                 # exit()
 
                 tf.summary.trace_on(graph=True, profiler=True)
-                self._model.train_step(inp, tar, is_training=True)
+                self._model.train_step(inp, tar, is_training=True, is_log=batch%100 == 0)
 
                 with train_summary_writer.as_default():
                     tf.summary.trace_export(
@@ -99,7 +128,7 @@ class Trainer:
                         step=step,
                         profiler_outdir=train_log_dir)
 
-                if batch % 5 == 0:
+                if batch % 50 == 0:
                     with train_summary_writer.as_default():
                         tf.summary.scalar('loss', train_loss.result(), step=step)
                         tf.summary.scalar('accuracy', train_accuracy.result(), step=step)
@@ -107,7 +136,7 @@ class Trainer:
                         epoch, batch, train_loss.result(), train_accuracy.result()))
                 step += 1
 
-            if epoch % 1 == 0:
+            if epoch % 5 == 0:
                 ckpt_save_path = self._ckpt_manager.save()
                 print('Saving checkpoint for epoch {} at {}'.format(epoch,
                                                                     ckpt_save_path))
