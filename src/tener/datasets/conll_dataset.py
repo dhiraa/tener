@@ -7,7 +7,6 @@ import pandas as pd
 import numpy as np
 import tensorflow as tf
 from tqdm import tqdm
-import tensorflow_datasets as tfds
 
 from tener.misc.pretty_print import print_error, print_info
 

@@ -128,7 +128,9 @@ class TenerModel(object):
             # print_info("Target : {}".format(tar))
             # print_info("Predictions : {}".format(predictions))
             print_error(tag_tokenizer.word_index)
-            predictions = tf.argmax(predictions, axis=-1)
+            if not self.use_crf:
+                predictions = tf.argmax(predictions, axis=-1)
+                
             if text_tokenizer and tag_tokenizer:
                 texts = text_tokenizer.sequences_to_texts(inp[0].numpy())
                 actual_tags = tag_tokenizer.sequences_to_texts(tar.numpy())
