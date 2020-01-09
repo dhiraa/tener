@@ -289,8 +289,8 @@ class CoNLLDataset(object):
             self.char_tokenizer = pickle.load(open(char_tokenizer_file, "rb"))
         else:
             self.char_tokenizer = get_keras_tokenizer(sentences, char_level=True, oov_token="<U>")
-            self.text_tokenizer = get_keras_tokenizer(sentences)
-            self.tags_tokenizer = get_keras_tokenizer(tags)
+            self.text_tokenizer = get_keras_tokenizer(sentences, oov_token="<UNK>")
+            self.tags_tokenizer = get_keras_tokenizer(tags, oov_token="O")
 
             pickle.dump(self.char_tokenizer, open(char_tokenizer_file, "wb"))
             pickle.dump(self.text_tokenizer, open(text_tokenizer_file, "wb"))
@@ -351,7 +351,8 @@ class CoNLLDataset(object):
         tags = tf.reshape(
             tf.cast(features['tag_ids'], tf.int64), shape=[self._max_seq_length+2])
 
-        return {"word_ids": text, "char_ids": char}, tags
+        # return {"word_ids": text, "char_ids": char}, tags
+        return text, char, tags
 
     def filter_max_length(self, x, y):
         return tf.logical_and(tf.size(x) <= self._max_seq_length,
@@ -373,6 +374,9 @@ class CoNLLDataset(object):
 
         print_info("Input vocab size is {}".format(self.input_vocab_size))
         print_info("Input tag size is {}".format(self.target_vocab_size))
+        print_info("Char word index : {}".format(self.char_tokenizer.word_index))
+        print_info("Tag word index : {}".format(self.tags_tokenizer.word_index))
+
 
 
         self.train_dataset = self.train_dataset.map(map_func=self.decode,
@@ -402,6 +406,7 @@ class CoNLLDataset(object):
         self.test_dataset = self.test_dataset.prefetch(tf.data.experimental.AUTOTUNE)
 
         print_info("Dataset preparation is over...")
+
 
 
 

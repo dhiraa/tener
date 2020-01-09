@@ -9,7 +9,7 @@ CoNLLDataset.max_seq_length=20
 CoNLLDataset.unknown_word='<UNK>'
 CoNLLDataset.seperator=" "
 CoNLLDataset.quotechar="^"
-CoNLLDataset.batch_size=16
+CoNLLDataset.batch_size=32
 CoNLLDataset.buffer_size=2000
 
 TenerModel.num_layers=2

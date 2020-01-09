@@ -2,6 +2,7 @@ import gin
 import tensorflow as tf
 import numpy as np
 
+from tener.misc.pretty_print import print_error, print_info, print_warn
 from tener.models.model_utils import create_masks
 from tener.utils import CustomSchedule
 
@@ -389,7 +390,7 @@ class VanillaTransformerModel(object):
                                    optimizer=self._optimizer())
 
     # @tf.function(input_signature=train_step_signature)
-    def train_step(self, inp, tar, is_training=False, is_log=False):
+    def train_step(self, inp, tar, is_training=False, is_log=False, text_tokenizer=None, tag_tokenizer=None):
         tar_inp = tar[:, :-1]
         tar_real = tar[:, 1:]
 
@@ -410,3 +411,21 @@ class VanillaTransformerModel(object):
 
         self._train_loss(loss)
         self._train_accuracy(tar_real, predictions)
+
+        if is_log:
+            # print_info("Input : {} {}".format(inp["word_ids"], inp["word_ids"].shape))
+            # print_info("Input : {} {}".format(inp[0], inp[1].shape))
+            # print_info("Target : {}".format(tar))
+            # print_info("Predictions : {}".format(predictions))
+            print_error(tag_tokenizer.word_index)
+            if text_tokenizer and tag_tokenizer:
+                texts = text_tokenizer.sequences_to_texts(inp[0].numpy())
+                actual_tags = tag_tokenizer.sequences_to_texts(tar.numpy())
+                pred_tags = tag_tokenizer.sequences_to_texts(predictions.numpy())
+
+                for text, actual_tag, pred_tag, pred_id in zip(texts, actual_tags, pred_tags, predictions.numpy()):
+                    print_info("Text: {}".format(text))
+                    print_warn("ATag: {}".format(actual_tag))
+                    print_warn("PTag: {}".format(pred_tag))
+                    print_warn("PTag: {}".format(pred_id))
+                    print("\n")

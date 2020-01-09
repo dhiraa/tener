@@ -61,7 +61,7 @@ def print_info(*args):
     :param args: user string information
     :return: stdout
     """
-    logger.info(CGREEN2 + str(*args) + CEND)
+    logger.info(CGREEN2 + "\t" + str(*args) + CEND)
 
 def print_error(*args):
     """
@@ -69,7 +69,7 @@ def print_error(*args):
     :param args: user string information
     :return: stdout
     """
-    logger.error(CRED + str(*args) + CEND)
+    logger.error(CRED + "\t" + str(*args) + CEND)
 
 def print_warn(*args):
     """
@@ -77,7 +77,7 @@ def print_warn(*args):
     :param args: user string information
     :return: stdout
     """
-    logger.warn(CYELLOW2 + str(*args) + CEND)
+    logger.warn(CYELLOW2 + "\t" + str(*args) + CEND)
 
 def print_debug(*args):
     """
@@ -85,4 +85,4 @@ def print_debug(*args):
     :param args: user string information
     :return: stdout
     """
-    logger.debug(CBLUE + str(*args) + CEND)
+    logger.debug(CBLUE + "\t" + str(*args) + CEND)

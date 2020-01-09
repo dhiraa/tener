@@ -19,11 +19,15 @@ def test_conll_dataset():
                            buffer_size=2000,
                            clear_data=True)
 
+    # Unknown for text tokenizer is `<UNK>`
+    # PAdd index 0 is unknown
     expected_text = ["_SOS_ begin one two three four five six Seven Eight . _EOS_",
                      '_SOS_ One Two one Three One Two one Nine <UNK> <UNK> _EOS_']
+    # Unknown for tag tokenizer is `O`
     expected_tag = ["_SOT_ O B-ORG O B-MISC O O O B-MISC O O _EOT_",
                     "_SOT_ B-PER I-PER B-LOC O B-PER I-PER B-LOC O O O _EOT_"]
 
+    # Unknown for tag tokenizer is `<U>`
     expected_char = [['< b > _ S O S _ < e > <U> <U> <U>',
                       '< b > b e g i n < e > <U> <U> <U>',
                       '< b > o n e < e > <U> <U> <U> <U> <U>',

@@ -1,12 +1,12 @@
 import tensorflow as tf
-from tener.misc.pretty_print import print_info
+from tener.misc.pretty_print import print_info, print_error
 from tener.models.model_utils import create_padding_mask
 from tener.models.layers import tener
 
 
 class TransformerCharEncoding(tf.keras.layers.Layer):
     def __init__(self, d_model, char_emd_dim, len_char_vocab, target_vocab_size):
-        super(TransformerCharEncoding, self).__init__()
+        super(TransformerCharEncoding, self).__init__(dynamic=True)
         self._char_emb_dim = char_emd_dim
         self._len_char_vocab = len_char_vocab
 
@@ -26,7 +26,7 @@ class TransformerCharEncoding(tf.keras.layers.Layer):
         """
 
         :param input: Tensor of size [batch_size, max_seq_length, max_word_length]
-        :return:
+        :return: Tensor of size [batch_size, max_seq_length, char_emd_dim]
         """
 
         embeddings = self._char_embed_layer(x) # [batch_size, max_seq_length, max_word_length, char_emd_dim]
@@ -42,5 +42,9 @@ class TransformerCharEncoding(tf.keras.layers.Layer):
         encoded = self._fc(encoded)
 
         return encoded
+
+
+    def compute_output_shape(self, x):
+        return tf.TensorShape((x[0], x[1], self._char_emb_dim))
 
 

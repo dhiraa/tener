@@ -1,6 +1,7 @@
 import tensorflow as tf
 
 
+
 def create_padding_mask(seq):
     """
 

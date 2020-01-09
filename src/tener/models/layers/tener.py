@@ -106,6 +106,8 @@ class TenerEncoder(tf.keras.layers.Layer):
         x = self.dropout(x, training=training)
         for i in range(self.num_layers):
             x = self.enc_layers[i](x, training, mask)
+
+        x = self.dropout(x)
         return x  # (batch_size, input_seq_len, d_model)
 
 
@@ -121,8 +123,6 @@ class TenerKerasModel(tf.keras.Model):
                  is_char_embd=True,
                  rate=0.1):
         super(TenerKerasModel, self).__init__()
-
-
         self._word_d_model = word_d_model
 
         if is_char_embd:
@@ -150,6 +150,7 @@ class TenerKerasModel(tf.keras.Model):
                                        rate=0.1,
                                        is_pos_emb=True)
 
+        self.target_vocab_size = target_vocab_size
         self.final_layer = tf.keras.layers.Dense(target_vocab_size)
 
     def call(self, x):
@@ -163,8 +164,11 @@ class TenerKerasModel(tf.keras.Model):
         """
 
         # print_error(x)
-        word_ids = x["word_ids"]  # [bacth_size, max_seq_length]
-        char_ids = x["char_ids"]
+        # word_ids = x["word_ids"]  # [bacth_size, max_seq_length]
+        # char_ids = x["char_ids"]
+
+        word_ids = x[0]
+        char_ids = x[1]
 
         word_embedding = self._word_embedding(word_ids)  # [bacth_size, max_seq_length, d_model/word_embd_size]
         word_embedding *= tf.math.sqrt(tf.cast(self._word_d_model, tf.float32))
@@ -185,3 +189,9 @@ class TenerKerasModel(tf.keras.Model):
         encoded = self.enc_layers(embedding, word_mask, True)
         final_output = self.final_layer(encoded)
         return final_output
+
+    def compute_output_shape(self, x):
+        print_error(x)
+        # input_shape = x["word_ids"]
+        input_shape = x[0]
+        return tf.TensorShape((input_shape[0], input_shape[1], self.target_vocab_size))

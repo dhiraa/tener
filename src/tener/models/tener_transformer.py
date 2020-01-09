@@ -2,7 +2,7 @@ import tensorflow as tf
 import tensorflow_addons as tfa
 import gin
 
-from tener.misc.pretty_print import print_error, print_info
+from tener.misc.pretty_print import print_error, print_info, print_warn
 from tener.models.embeddings.character_embd import TransformerCharEncoding
 from tener.models.embeddings.sinusoidal_embd import positional_encoding
 from tener.models.layers.tener import TenerKerasModel
@@ -37,6 +37,7 @@ class TenerModel(object):
                  char_d_model=32,
                  num_heads=8,
                  dff=512,
+                 use_crf=True,
                  attntype="naive",
                  is_char_embd=True,
                  rate=0.1):
@@ -53,7 +54,8 @@ class TenerModel(object):
 
         self._train_loss = tf.keras.metrics.Mean(name='train_loss')
 
-        if False:
+        self.use_crf = use_crf
+        if not self.use_crf:
             self._train_accuracy = tf.keras.metrics.SparseCategoricalAccuracy(name='train_accuracy')
         else:
             self._train_accuracy = tf.metrics.Accuracy(name="train_accuracy")
@@ -97,7 +99,7 @@ class TenerModel(object):
                                    optimizer=self._optimizer())
 
     # @tf.function(input_signature=train_step_signature)
-    def train_step(self, inp, tar, is_training=True, is_log=False):
+    def train_step(self, inp, tar, is_training=True, is_log=False, text_tokenizer=None, tag_tokenizer=None):
         """
 
         :param inp: Dict {"word_ids" : Tensor[batch_size, max_seq_length] ,
@@ -108,19 +110,38 @@ class TenerModel(object):
         """
         with tf.GradientTape() as tape:
             logits = self._transformer(inp)
-            predictions, loss = self._loss(logits=logits, real=tar, is_training=is_training)
+            if self.use_crf:
+                predictions, loss = self._loss(logits=logits, real=tar, is_training=is_training)
+            else:
+                loss = self._loss_naive(real=tar, logits=logits, is_training=is_training)
+                predictions = logits
 
         gradients = tape.gradient(loss, self._transformer.trainable_variables)
         self._optimizer().apply_gradients(zip(gradients, self._transformer.trainable_variables))
 
         self._train_loss(loss)
-
         self._train_accuracy(tar, predictions)
 
         if is_log:
-            print_info("Input : {} {}".format(inp["word_ids"], inp["word_ids"].shape))
-            print_info("Target : {}".format(tar))
-            print_info("Predictions : {}".format(predictions))
+            # print_info("Input : {} {}".format(inp["word_ids"], inp["word_ids"].shape))
+            # print_info("Input : {} {}".format(inp[0], inp[1].shape))
+            # print_info("Target : {}".format(tar))
+            # print_info("Predictions : {}".format(predictions))
+            print_error(tag_tokenizer.word_index)
+            predictions = tf.argmax(predictions, axis=-1)
+            if text_tokenizer and tag_tokenizer:
+                texts = text_tokenizer.sequences_to_texts(inp[0].numpy())
+                actual_tags = tag_tokenizer.sequences_to_texts(tar.numpy())
+                pred_tags = tag_tokenizer.sequences_to_texts(predictions.numpy())
+
+                for text, actual_tag, pred_tag, pred_id in zip(texts, actual_tags, pred_tags, predictions.numpy()):
+                    print_info("Text: {}".format(text))
+                    print_warn("ATag: {}".format(actual_tag))
+                    print_warn("PTag: {}".format(pred_tag))
+                    print_warn("PTag: {}".format(pred_id))
+                    print("\n")
+
+
 
 
 

@@ -53,7 +53,7 @@ class RelativeMultiHeadAttn(tf.keras.layers.Layer):
         -3 -2 -1 0 1 2
         -3 -2 -1 0 1 2
         Translate to:
-        0   1  2
+         0  1  2
         -1  0  1
         -2 -1  0
         :param BD: batch_size x n_head x max_len x 2max_len

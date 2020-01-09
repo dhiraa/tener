@@ -73,7 +73,7 @@ class RelativeSinusoidalPositionalEmbedding(tf.keras.layers.Layer):
         """
 
         :param input: Tensor of size [batch_size x seq_length]
-        :return:
+        :return: Tensor of size [batch_size x 2*seq_length]
         """
         if len(input.shape) == 4:
             batch_size, _, _, seq_len = input.shape

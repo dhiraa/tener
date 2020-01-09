@@ -56,4 +56,5 @@ class TestTransformerCharEncoding(tf.test.TestCase):
 
         # print_info("TestTransformerCharEncoding {}".format(encoded.shape))
 
-        assert encoded.shape == (len(text_data), MAX_SEQ_LENGTH, EMBEDDIND_SIZE)
+        batch_size = len(text_data)
+        assert encoded.shape == (batch_size, MAX_SEQ_LENGTH, EMBEDDIND_SIZE)

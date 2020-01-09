@@ -1,6 +1,8 @@
 #!/usr/bin/env python
 import datetime
 
+from tensorflow import TensorShape
+
 __author__ = "Mageswaran Dhandapani"
 __copyright__ = "Copyright 2020, The Dhira Project"
 __credits__ = []
@@ -35,6 +37,29 @@ flags.DEFINE_string("config_file", "Google Gin config file format", "/path/to/*.
 from tener.misc.pretty_print import print_info, print_error
 
 
+class KerasDataGenerator(tf.keras.utils.Sequence):
+    def __init__(self, tf_dataset):
+        self._tf_dataset = tf_dataset
+
+        num_batches = 0
+        for _ in self._tf_dataset:
+            num_batches += 1
+        self._num_batches = num_batches
+
+        self.it = iter(self._tf_dataset)
+
+    def __len__(self):
+        print_error(self._num_batches)
+        return self._num_batches
+
+    def __getitem__(self, item):
+        data = next(self.it)
+        print_error(data)
+        return data
+
+    def on_epoch_end(self):
+        self.it = iter(self._tf_dataset)
+
 @gin.configurable
 class Trainer:
     def __init__(self,
@@ -42,6 +67,9 @@ class Trainer:
                  model_name=None,
                  epochs=100,
                  checkpoint_path=None):
+
+        # tf.summary.trace_on(graph=True, profiler=True)
+
         self._dataset = None
         self._model = None
         self._epochs = epochs
@@ -51,7 +79,7 @@ class Trainer:
         self._checkpoint_path = checkpoint_path
 
         if dataset_name == "conll2003":
-            self._dataset = CoNLLDataset()
+            self._dataset: CoNLLDataset = CoNLLDataset()
 
         if model_name == "vanilla_transformer":
             self._model = VanillaTransformerModel(input_vocab_size=self._dataset.input_vocab_size,
@@ -59,7 +87,6 @@ class Trainer:
         elif model_name == "tener":
             self._model = TenerModel(input_vocab_size=self._dataset.input_vocab_size,
                                      target_vocab_size=self._dataset.target_vocab_size)
-
 
         self._ckpt_manager = tf.train.CheckpointManager(self._model.ckpt(), checkpoint_path, max_to_keep=5)
 
@@ -70,8 +97,6 @@ class Trainer:
 
 
     def train(self):
-
-        tf.summary.trace_on(graph=True)
 
         train_loss = self._model._train_loss
         train_accuracy = self._model._train_accuracy
@@ -84,8 +109,29 @@ class Trainer:
 
         step = 0
 
+
+        # >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+        # training_generator = KerasDataGenerator(self._dataset.train_dataset)
+        # model =  self._model._transformer
+        #
+        # model.compile()
+        # model.fit_generator(generator=training_generator)
+        # model.build([TensorShape([self._dataset._batch_size, self._dataset._max_seq_length]),
+        #              TensorShape([self._dataset._batch_size,
+        #                           self._dataset._max_seq_length,
+        #                           self._dataset._max_word_length])])
+        #
+        #
+        #
+        #
+        # exit()
+
+        # <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+
         # https://github.com/tensorflow/datasets/issues/561
+        # https://www.pyimagesearch.com/2018/12/24/how-to-use-keras-fit-and-fit_generator-a-hands-on-tutorial/
         # https://www.dlology.com/blog/an-easy-guide-to-build-new-tensorflow-datasets-and-estimator-with-keras-model/
+        # https://www.pyimagesearch.com/2019/10/28/3-ways-to-create-a-keras-model-with-tensorflow-2-0-sequential-functional-and-model-subclassing/
         for epoch in tqdm(range(1, self._epochs+1), desc="Epoch"):
 
             start = time.time()
@@ -93,15 +139,19 @@ class Trainer:
             train_loss.reset_states()
             train_accuracy.reset_states()
 
-            for (batch, (inp, tar)) in tqdm(enumerate(self._dataset.train_dataset), desc="Batch"):
-                tf.summary.trace_on(graph=True, profiler=True)
-                self._model.train_step(inp, tar, is_training=True, is_log=batch%100 == 0)
+            for (batch, (words, chars, tar)) in tqdm(enumerate(self._dataset.train_dataset), desc="Batch"):
+                self._model.train_step([words, chars],
+                                       tar,
+                                       text_tokenizer=self._dataset.text_tokenizer,
+                                       tag_tokenizer=self._dataset.tags_tokenizer,
+                                       is_training=True,
+                                       is_log=batch%100 == 0)
 
-                with train_summary_writer.as_default():
-                    tf.summary.trace_export(
-                        name="tener_trace",
-                        step=step,
-                        profiler_outdir=train_log_dir)
+                # with train_summary_writer.as_default():
+                #     tf.summary.trace_export(
+                #         name="tener_trace",
+                #         step=step,
+                #         profiler_outdir=train_log_dir)
 
                 if batch % 50 == 0:
                     with train_summary_writer.as_default():
