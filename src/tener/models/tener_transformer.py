@@ -106,9 +106,7 @@ class TenerModel(object):
         :param is_training: True/False
         :return: None
         """
-
         with tf.GradientTape() as tape:
-
             logits = self._transformer(inp)
             predictions, loss = self._loss(logits=logits, real=tar, is_training=is_training)
 

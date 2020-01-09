@@ -2,16 +2,52 @@
 
 Tensorflow-Keras port of https://github.com/fastnlp/TENER. 
 
+The motivation behind this port is:
+- To check the claim that this architecture can perrform well in small dataset 
+- To build the basic data preprocessing from scratch
+- Implement the Tener architecture in Tensorflow 
+- Tryout different position strategy after mimiking the basic metrics
+
+# Checklist
+- [x] Dataset preparation and test cases
+- [x] Gin-config
+- [x] Plug and play trainer for datasets and model architecture
+- [x] Vanilla transformer model integration 
+- [x] Tener transformer model 
+    - [x] Embeddings
+        - [x] Sinusoidal
+        - [x] RelativeSinusoidal
+        - [x] Character Embedding
+    - [x] Attention
+        - [x] MultiHeadNaive 
+        - [X] MiltiHeadRelative
+- [ ] Tuning and Debugging
+    - [ ] Vanilla Transformer Model
+    - [ ] Tener Transformer Model
+
 # Setup
 
 ```
 pip install -r requirements.txt
 ```
-# How ?:
+
+# Module Design
+- Google [Gin-Config](https://github.com/google/gin-config) based configuration
+- Trainer script that reads the config and selects the dataset and model to be used
+- Model class that encapsulates the Keras model layers, loss, metrics and train step
+
+```
+gin config file ---> trainer ---> dataset and model ---> Keras Model 
+```
+
+# How to run?:
 
 - Train
 ```
 cd tener/
+# To use vanilla transformer architecture from Tensorflow Tutorial
+python bin/trainer.py --config_file=config/vanilla_transformer.gin
+# Tener absed architecture 
 python bin/trainer.py --config_file=config/tener.gin
 ```
 

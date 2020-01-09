@@ -22,9 +22,9 @@
 #
 #     return lang1, lang2
 #
-# def filter_max_length(x, y, max_length=MAX_LENGTH):
-#   return tf.logical_and(tf.size(x) <= max_length,
-#                         tf.size(y) <= max_length)
+# def filter_max_length(x, y, max_seq_length=MAX_LENGTH):
+#   return tf.logical_and(tf.size(x) <= max_seq_length,
+#                         tf.size(y) <= max_seq_length)
 #
 #
 # def tf_encode(pt, en):

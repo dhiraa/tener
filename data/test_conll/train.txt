@@ -1,0 +1,23 @@
+-DOCSTART- -X- -X- O
+
+begin DT B-NP O
+one NNP B-NP B-ORG
+two VBZ B-VP O
+three JJ B-NP B-MISC
+four NN I-NP O
+five TO B-VP O
+six VB I-VP O
+Seven JJ B-NP B-MISC
+Eight NN I-NP O
+. . O O
+
+One NNP B-NP B-PER
+Two NNP I-NP I-PER
+one NNP B-NP B-LOC
+Three CD I-NP O
+One NNP B-NP B-PER
+Two NNP I-NP I-PER
+one NNP B-NP B-LOC
+Nine CD I-NP O
+
+

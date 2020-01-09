@@ -215,13 +215,13 @@ class Encoder(tf.keras.layers.Layer):
 
     def call(self, x, training, mask):
         seq_len = tf.shape(x)[1]
-        print("enc: seq_len : {}".format(seq_len))
+        # print("enc: seq_len : {}".format(seq_len))
 
         # adding _word_embedding and position encoding.
         x = self.embedding(x)  # (batch_size, input_seq_len, d_model)
-        print("enc: _word_embedding {}".format(x.shape))
+        # print("enc: _word_embedding {}".format(x.shape))
         x *= tf.math.sqrt(tf.cast(self.d_model, tf.float32))
-        print("dec sin_pos_encoding : {}".format(self.pos_encoding.shape))
+        # print("dec sin_pos_encoding : {}".format(self.pos_encoding.shape))
         pos = self.pos_encoding[:, :seq_len, :]
         x += pos
 
@@ -230,7 +230,7 @@ class Encoder(tf.keras.layers.Layer):
         for i in range(self.num_layers):
             x = self.enc_layers[i](x, training, mask)
 
-        print("enc: out {}".format(x.shape))
+        # print("enc: out {}".format(x.shape))
 
         return x  # (batch_size, input_seq_len, d_model)
 
@@ -248,7 +248,7 @@ class Decoder(tf.keras.layers.Layer):
                  rate=0.1):
         super(Decoder, self).__init__()
 
-        print(">>>>>>>>>>>", maximum_position_encoding, d_model)
+        # print(">>>>>>>>>>>", maximum_position_encoding, d_model)
         self.d_model = d_model
         self.num_layers = num_layers
 
@@ -264,15 +264,15 @@ class Decoder(tf.keras.layers.Layer):
         seq_len = tf.shape(x)[1]
         attention_weights = {}
 
-        print("dec seq_length : {}".format(seq_len))
+        # print("dec seq_length : {}".format(seq_len))
 
         x = self.embedding(x)  # (batch_size, target_seq_len, d_model)
-        print("dec: _word_embedding {}".format(x.shape))
+        # print("dec: _word_embedding {}".format(x.shape))
         x *= tf.math.sqrt(tf.cast(self.d_model, tf.float32))
-        print("dec x : {}".format(x.shape))
+        # print("dec x : {}".format(x.shape))
         pos = self.pos_encoding[:, :seq_len, :]
-        print("dec sin_pos_encoding : {}".format(self.pos_encoding.shape))
-        print("dec pos : {}".format(pos.shape))
+        # print("dec sin_pos_encoding : {}".format(self.pos_encoding.shape))
+        # print("dec pos : {}".format(pos.shape))
         x = x + pos
         x = self.dropout(x, training=training)
 
@@ -282,7 +282,7 @@ class Decoder(tf.keras.layers.Layer):
             attention_weights['decoder_layer{}_block1'.format(i + 1)] = block1
             attention_weights['decoder_layer{}_block2'.format(i + 1)] = block2
 
-        print("dec: out {}".format(x.shape))
+        # print("dec: out {}".format(x.shape))
         # print("dec: attention_weights {}".format(attention_weights))
 
         # x.shape == (batch_size, target_seq_len, d_model)
@@ -324,12 +324,12 @@ class VanillaTransformer(tf.keras.Model):
     def call(self, inp, tar, training, enc_padding_mask,
              look_ahead_mask, dec_padding_mask):
         enc_output = self.encoder(inp, training, enc_padding_mask)  # (batch_size, inp_seq_len, d_model)
-        print(">>> Trans: enc_output : {}".format(enc_output.shape))
+        # print(">>> Trans: enc_output : {}".format(enc_output.shape))
         # dec_output.shape == (batch_size, tar_seq_len, d_model)
         dec_output, attention_weights = self.decoder(tar, enc_output, training, look_ahead_mask, dec_padding_mask)
-        print(">>> Trans: dec_output : {}".format(dec_output.shape))
+        # print(">>> Trans: dec_output : {}".format(dec_output.shape))
         final_output = self.final_layer(dec_output)  # (batch_size, tar_seq_len, target_vocab_size)
-        print(">>> Trans: final_output : {}".format(final_output.shape))
+        # print(">>> Trans: final_output : {}".format(final_output.shape))
         return final_output, attention_weights
 
 # ----------------------------------------------------------------------------------------------------------------------
@@ -353,14 +353,14 @@ class VanillaTransformerModel(object):
                  rate=0.1):
         self._d_model = d_model
         self._transformer = VanillaTransformer(num_layers=num_layers,
-                 d_model=d_model,
-                 num_heads=num_heads,
-                 dff=dff,
-                 input_vocab_size=input_vocab_size,
-                 target_vocab_size=target_vocab_size,
-                 pos_inp_emb_max_index=pos_inp_emb_max_index,
-                 pos_tar_emb_max_index=pos_tar_emb_max_index,
-                 rate=0.1)
+                                               d_model=d_model,
+                                               num_heads=num_heads,
+                                               dff=dff,
+                                               input_vocab_size=input_vocab_size,
+                                               target_vocab_size=target_vocab_size,
+                                               pos_inp_emb_max_index=pos_inp_emb_max_index,
+                                               pos_tar_emb_max_index=pos_tar_emb_max_index,
+                                               rate=0.1)
 
         self._train_loss = tf.keras.metrics.Mean(name='train_loss')
         self._train_accuracy = tf.keras.metrics.SparseCategoricalAccuracy(name='train_accuracy')
@@ -389,23 +389,21 @@ class VanillaTransformerModel(object):
                                    optimizer=self._optimizer())
 
     # @tf.function(input_signature=train_step_signature)
-    def train_step(self, inp, tar):
+    def train_step(self, inp, tar, is_training=False, is_log=False):
         tar_inp = tar[:, :-1]
         tar_real = tar[:, 1:]
 
-        print("2. >>>>>>>>>>>>>> {} {}".format(inp.shape, tar.shape))
-
-        enc_padding_mask, combined_mask, dec_padding_mask = create_masks(inp, tar_inp)
+        enc_padding_mask, combined_mask, dec_padding_mask = create_masks(inp["word_ids"], tar_inp)
 
         with tf.GradientTape() as tape:
-            predictions, _ = self._transformer(inp,
+            predictions, _ = self._transformer(inp["word_ids"],
                                                tar_inp,
                                                True,
                                                enc_padding_mask,
                                                combined_mask,
                                                dec_padding_mask)
             loss = self._loss(tar_real, predictions)
-            print("!!!!! trainer : {}".format(loss))
+            # print("!!!!! trainer : {}".format(loss))
 
         gradients = tape.gradient(loss, self._transformer.trainable_variables)
         self._optimizer().apply_gradients(zip(gradients, self._transformer.trainable_variables))

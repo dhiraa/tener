@@ -41,10 +41,13 @@ class Trainer:
                  dataset_name=None,
                  model_name=None,
                  epochs=100,
-                 checkpoint_path="store/checkpoints/train/"):
+                 checkpoint_path=None):
         self._dataset = None
         self._model = None
         self._epochs = epochs
+        if checkpoint_path is None:
+            checkpoint_path = "store/checkpoints/" + model_name
+
         self._checkpoint_path = checkpoint_path
 
         if dataset_name == "conll2003":
@@ -64,10 +67,11 @@ class Trainer:
         if self._ckpt_manager.latest_checkpoint:
             self._model.ckpt().restore(self._ckpt_manager.latest_checkpoint)
             print('Latest checkpoint restored!!')
-        self._word_embedding = tf.keras.layers.Embedding(self._dataset.input_vocab_size, self._model._word_d_model)
 
 
     def train(self):
+
+        tf.summary.trace_on(graph=True)
 
         train_loss = self._model._train_loss
         train_accuracy = self._model._train_accuracy
@@ -80,32 +84,6 @@ class Trainer:
 
         step = 0
 
-        # self._model._transformer.build({"word_ids": (None, 32, 32, 3), "char_ids": (None, 32, 32, 3)})
-        # self._model._transformer.compile(optimizer="adam",  # Optimizer
-        #                                  # Loss function to minimize
-        #                                  loss=tf.keras.losses.SparseCategoricalCrossentropy(),
-        #                                  # List of metrics to monitor
-        #                                  metrics=[tf.keras.metrics.SparseCategoricalAccuracy()])
-        #
-        # # x_train, y_train = self._dataset.train_dataset
-        # history = self._model._transformer.fit(self._dataset.train_dataset,
-        #                                        batch_size=None,
-        #                                        epochs=1)
-        #
-        # print_info(self._model._transformer.summary())
-        #
-        # tf.keras.utils.plot_model(
-        #     self._model._transformer,
-        #     to_file='tener_model.png',
-        #     show_shapes=True,
-        #     show_layer_names=True,
-        #     rankdir='TB',
-        #     expand_nested=False,
-        #     dpi=96
-        # )
-        #
-        # exit()
-
         # https://github.com/tensorflow/datasets/issues/561
         # https://www.dlology.com/blog/an-easy-guide-to-build-new-tensorflow-datasets-and-estimator-with-keras-model/
         for epoch in tqdm(range(1, self._epochs+1), desc="Epoch"):
@@ -116,9 +94,6 @@ class Trainer:
             train_accuracy.reset_states()
 
             for (batch, (inp, tar)) in tqdm(enumerate(self._dataset.train_dataset), desc="Batch"):
-                # print_info("1. >>>>>>>>>>>>>> {} {}".format(batch, inp))
-                # exit()
-
                 tf.summary.trace_on(graph=True, profiler=True)
                 self._model.train_step(inp, tar, is_training=True, is_log=batch%100 == 0)
 

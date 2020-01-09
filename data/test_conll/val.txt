@@ -1,0 +1,20 @@
+-DOCSTART- -X- -X- O
+
+one NNP B-NP O
+two : O O
+three NNP B-NP B-ORG
+four NNP I-NP O
+five IN B-PP O
+six NNP B-NP O
+seven NNP I-NP O
+Eight NNP I-NP O
+nine NNP I-NP O
+ten NN I-NP O
+. . O O
+
+Two NNP B-NP B-LOC
+eight CD I-NP O
+seven NNP I-NP O
+Eight NNP I-NP O
+nine NNP I-NP O
+ten NN I-NP O

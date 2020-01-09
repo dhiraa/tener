@@ -1,6 +1,7 @@
 import os
 from string import punctuation
 import pickle
+import shutil
 import gin
 import pandas as pd
 import numpy as np
@@ -28,9 +29,9 @@ def _mat_feature(mat):
     return tf.train.Feature(int64_list=tf.train.Int64List(value=mat.flatten()))
 
 
-def get_keras_tokenizer(text_corpus, char_level=False,):
+def get_keras_tokenizer(text_corpus, char_level=False, oov_token="<UNK>"):
     # Here we wanted all the special characters to be part of the vocab, as it is important for NER tagging
-    tokenizer = tf.keras.preprocessing.text.Tokenizer(filters='', oov_token="<UNK>", char_level=char_level, lower=False)
+    tokenizer = tf.keras.preprocessing.text.Tokenizer(filters='', oov_token=oov_token, char_level=char_level, lower=False)
     tokenizer.fit_on_texts(text_corpus)
     return tokenizer
 
@@ -80,8 +81,8 @@ def _conll_to_csv(txt_file_path, out_dir, unknown_word="<UNK>"):
                 current_file = []
 
 
-def str_list_to_char_index(text, max_seq_len = 20, max_char_length=10):
-    text_char_tonkenizer = get_keras_tokenizer(text, char_level=True)
+def str_list_to_char_index(text, text_char_tonkenizer, max_seq_len=20, max_char_length=10):
+    # text_char_tonkenizer = get_keras_tokenizer(text, char_level=True)
 
     # split the text by spaces i.e list of list of words
     char_data = [text.split(" ") for text in text]
@@ -105,7 +106,7 @@ def str_list_to_char_index(text, max_seq_len = 20, max_char_length=10):
         # print_info(res.shape)
         char_data_encoded.append(res)
 
-    return char_data_encoded, text_char_tonkenizer
+    return char_data_encoded#, text_char_tonkenizer
 
 @gin.configurable
 class CoNLLDataset(object):
@@ -114,25 +115,31 @@ class CoNLLDataset(object):
                  out_data_dir="processed/",
                  text_column="0",
                  entity_column="3",
-                 max_length=40,
+                 max_seq_length=40,
+                 max_word_length=10,
                  unknown_word='<UNK>',
                  seperator=" ",  # potential error point depending on the datasets
                  quotechar="^",
                  batch_size=64,
-                 buffer_size=2000):
+                 buffer_size=2000,
+                 clear_data=False):
         """
 
         :param in_data_dir:
         :param out_data_dir:
         :param text_column:
         :param entity_column:
-        :param max_length:
+        :param max_seq_length:
         :param unknown_word:
         :param seperator:
         :param quotechar:
         :param batch_size:
         :param buffer_size:
         """
+
+        if clear_data:
+            shutil.rmtree(out_data_dir)
+
         self._in_data_dir = in_data_dir
         self._out_data_dir = out_data_dir
 
@@ -147,8 +154,8 @@ class CoNLLDataset(object):
         self._buffer_size = buffer_size
         self._batch_size = batch_size
         # account in for start & stop words
-        self._max_seq_length = max_length # StartOfSentence +  EndOFSentence
-        self._max_word_length = 10
+        self._max_seq_length = max_seq_length
+        self._max_word_length = max_word_length
 
         self._start_word = "_SOS_"  # StartOfSentence
         self._end_word = "_EOS_"  # EndOFSentence
@@ -174,10 +181,10 @@ class CoNLLDataset(object):
         """
         _conll_to_csv(txt_file_path=self._in_data_dir+"/train.txt",
                       out_dir=self._out_train_dir)
-        # _conll_to_csv(txt_file_path=self._in_data_dir+"/test.txt",
-        #               out_dir=self._out_test_dir)
-        # _conll_to_csv(txt_file_path=self._in_data_dir+"/val.txt",
-        #               out_dir=self._out_val_dir)
+        _conll_to_csv(txt_file_path=self._in_data_dir+"/test.txt",
+                      out_dir=self._out_test_dir)
+        _conll_to_csv(txt_file_path=self._in_data_dir+"/val.txt",
+                      out_dir=self._out_val_dir)
 
     def csv_to_data(self, csv_files_path):
         """
@@ -205,9 +212,15 @@ class CoNLLDataset(object):
             list_of_words = df[self._text_column].astype(str).values.tolist()[:self._max_seq_length]
             list_of_tag = df[self._entity_column].astype(str).values.tolist()[:self._max_seq_length]
 
+            # If the sequence length is less than given max sequence length
+            if len(list_of_words) < self._max_seq_length:
+                list_of_words = list_of_words + ["<UNK>"] * (self._max_seq_length - len(list_of_words))
+                list_of_tag = list_of_tag + ["O"] * (self._max_seq_length - len(list_of_tag))
+
+            assert len(list_of_words) == self._max_seq_length
+
             list_of_words = [self._start_word] + list_of_words + [self._end_word]
             list_of_tag = [self._start_tag] + list_of_tag + [self._end_tag]
-
 
             assert len(list_of_words) == len(list_of_tag)
 
@@ -216,23 +229,14 @@ class CoNLLDataset(object):
             tag = "{}".format(self._seperator).join(list_of_tag)
             tag_label.append(tag)
 
-
         return sentence_feature, tag_label
 
     def _get_features(self, sentence, char_ids, ner_tags):
         """
         Given different features matrices, this routine wraps the matrices as TF features
         """
-        # print_error(sentence)
-        # print_error(char_ids)
-        # print_error(ner_tags)
-        #
-        #
-        # print_error(np.array(sentence).shape)
-        # print_error(np.array(char_ids).shape)
-        # print_error(np.array(ner_tags).shape)
-
-        return {"word_ids": _mat_feature(sentence), "char_ids": _mat_feature(char_ids), "tag_ids": _mat_feature(ner_tags)}
+        data = {"word_ids": _mat_feature(sentence), "char_ids": _mat_feature(char_ids), "tag_ids": _mat_feature(ner_tags)}
+        return data
 
     def write_tf_records(self, word_ids_padded, tag_ids_padded, char_ids_padded, file_path_name):
         """
@@ -257,30 +261,34 @@ class CoNLLDataset(object):
         :return:
         """
 
+        print_info("Processing data in {}".format(csv_files_path))
         text_tokenizer_file = self._out_train_dir + "/text_tokenizer.dat"
         char_tokenizer_file = self._out_train_dir + "/char_tokenizer.dat"
         tags_tokenizer_file = self._out_train_dir + "/tags_tokenizer.dat"
         out_file_path = csv_files_path+"/tf_data.tfrecords"
 
         # Load TFRecords file if found
-        # Check for pickled tokenizer in the output path and load if available
-        if os.path.exists(out_file_path) and \
-                os.path.exists(text_tokenizer_file) and \
-                os.path.exists(tags_tokenizer_file):
+        if os.path.exists(out_file_path):
+
             self.text_tokenizer = pickle.load(open(text_tokenizer_file, "rb"))
             self.tags_tokenizer = pickle.load(open(tags_tokenizer_file, "rb"))
             self.char_tokenizer = pickle.load(open(char_tokenizer_file, "rb"))
+
             dataset = tf.data.TFRecordDataset(out_file_path)
-
             print_info("Found file {}".format(out_file_path))
+            return dataset
+
+        sentences, tags = self.csv_to_data(csv_files_path)
+
+        # Check for pickled tokenizer in the output path and load if available
+        if os.path.exists(text_tokenizer_file) and \
+                os.path.exists(tags_tokenizer_file):
+            print_info("Loading tokenizers...")
+            self.text_tokenizer = pickle.load(open(text_tokenizer_file, "rb"))
+            self.tags_tokenizer = pickle.load(open(tags_tokenizer_file, "rb"))
+            self.char_tokenizer = pickle.load(open(char_tokenizer_file, "rb"))
         else:
-            sentences, tags = self.csv_to_data(csv_files_path)
-
-            char_ids_padded, char_tokenizer = str_list_to_char_index(text=sentences,
-                                                                     max_seq_len=self._max_seq_length+2,
-                                                                     max_char_length=self._max_word_length)
-
-            self.char_tokenizer = char_tokenizer
+            self.char_tokenizer = get_keras_tokenizer(sentences, char_level=True, oov_token="<U>")
             self.text_tokenizer = get_keras_tokenizer(sentences)
             self.tags_tokenizer = get_keras_tokenizer(tags)
 
@@ -288,29 +296,40 @@ class CoNLLDataset(object):
             pickle.dump(self.text_tokenizer, open(text_tokenizer_file, "wb"))
             pickle.dump(self.tags_tokenizer, open(tags_tokenizer_file, "wb"))
 
-            word_ids = self.text_tokenizer.texts_to_sequences(sentences)
-            word_ids_padded = tf.keras.preprocessing.sequence.pad_sequences(word_ids, padding='post')
-            # print_error("sentences {}".format(sentences))
+        char_ids_padded = str_list_to_char_index(text=sentences,
+                                                 max_seq_len=self._max_seq_length + 2,
+                                                 max_char_length=self._max_word_length,
+                                                 text_char_tonkenizer=self.char_tokenizer)
 
-            tag_ids = self.tags_tokenizer.texts_to_sequences(tags)
-            tag_ids_padded = tf.keras.preprocessing.sequence.pad_sequences(tag_ids, padding='post')
-            # print_error("tags {}".format(tags))
+        word_ids = self.text_tokenizer.texts_to_sequences(sentences)
+        word_ids_padded = tf.keras.preprocessing.sequence.pad_sequences(word_ids, padding='post')
 
-            self.write_tf_records(file_path_name=out_file_path,
-                                  word_ids_padded=word_ids_padded,
-                                  tag_ids_padded=tag_ids_padded,
-                                  char_ids_padded=char_ids_padded)
+        tag_ids = self.tags_tokenizer.texts_to_sequences(tags)
+        tag_ids_padded = tf.keras.preprocessing.sequence.pad_sequences(tag_ids, padding='post')
 
-            # Read it back after writing
-            print_info("Found file {}".format(out_file_path))
-            dataset = tf.data.TFRecordDataset(out_file_path)
+        self.write_tf_records(file_path_name=out_file_path,
+                              word_ids_padded=word_ids_padded,
+                              tag_ids_padded=tag_ids_padded,
+                              char_ids_padded=char_ids_padded)
+
+        # Read it back after writing
+        print_info("Found file {}".format(out_file_path))
+        dataset = tf.data.TFRecordDataset(out_file_path)
+
+        # print_info(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>")
+        # print_info(sentences)
+        # print_info(tags)
+        # print_info(char_ids_padded)
+        # print_info(word_ids_padded)
+        # print_info(tag_ids_padded)
+        # print_info("<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<")
 
         return dataset
 
     def data_to_dataset(self):
         self.train_dataset = self.load_or_create_dataset(self._out_train_dir)
-        # self.val_dataset = self.load_or_create_dataset(self._out_val_dir)
-        # self.test_dataset = self.load_or_create_dataset(self._out_test_dir)
+        self.val_dataset = self.load_or_create_dataset(self._out_val_dir)
+        self.test_dataset = self.load_or_create_dataset(self._out_test_dir)
 
     def decode(self, serialized_example):
         # 1. define a parser
@@ -319,11 +338,12 @@ class CoNLLDataset(object):
             serialized_example,
             features={
                 'word_ids': tf.io.FixedLenFeature([self._max_seq_length+2], tf.int64),
-                #6 added sinec we include <b> and <e> as start and end of word in character indexing
+                # 6 added since we include <b> and <e> as start and end of word in character indexing
                 'char_ids': tf.io.FixedLenFeature([self._max_seq_length+2, self._max_word_length+6], tf.int64),
                 'tag_ids': tf.io.FixedLenFeature([self._max_seq_length+2], tf.int64),
 
             })
+
         text = tf.reshape(
             tf.cast(features['word_ids'], tf.int64), shape=[self._max_seq_length+2])
         char = tf.reshape(
@@ -342,13 +362,19 @@ class CoNLLDataset(object):
         print_info("Preparing the Conll2003 dataset...")
 
         self.txt_to_csv()
+        print_info("Loading Tensorflow Dataset...")
         self.data_to_dataset()
+        print_info("Done loading Tensorflow Dataset...")
+
 
         # Add OutOfVocab to the vocab size
         self.input_vocab_size = len(self.text_tokenizer.word_index) + 1
         self.target_vocab_size = len(self.tags_tokenizer.word_index) + 1
 
-        print_info("Loading Tensorflow Dataset...")
+        print_info("Input vocab size is {}".format(self.input_vocab_size))
+        print_info("Input tag size is {}".format(self.target_vocab_size))
+
+
         self.train_dataset = self.train_dataset.map(map_func=self.decode,
                                                     num_parallel_calls=tf.data.experimental.AUTOTUNE)
         # We have handled this while preparing the dataset
@@ -361,4 +387,23 @@ class CoNLLDataset(object):
         # self.train_dataset = self.train_dataset.shuffle(self._buffer_size).padded_batch(
         # self._batch_size, padded_shapes=([-1], [-1]))
         self.train_dataset = self.train_dataset.batch(self._batch_size, drop_remainder=True)
-        # self.train_dataset = self.train_dataset.prefetch(tf.data.experimental.AUTOTUNE)
+        self.train_dataset = self.train_dataset.prefetch(tf.data.experimental.AUTOTUNE)
+
+        self.val_dataset = self.val_dataset.map(map_func=self.decode,
+                                                num_parallel_calls=tf.data.experimental.AUTOTUNE)
+        self.val_dataset = self.val_dataset.cache()
+        self.val_dataset = self.val_dataset.batch(self._batch_size, drop_remainder=True)
+        self.val_dataset = self.val_dataset.prefetch(tf.data.experimental.AUTOTUNE)
+
+        self.test_dataset = self.test_dataset.map(map_func=self.decode,
+                                                  num_parallel_calls=tf.data.experimental.AUTOTUNE)
+        self.test_dataset = self.test_dataset.cache()
+        self.test_dataset = self.test_dataset.batch(self._batch_size, drop_remainder=True)
+        self.test_dataset = self.test_dataset.prefetch(tf.data.experimental.AUTOTUNE)
+
+        print_info("Dataset preparation is over...")
+
+
+
+
+

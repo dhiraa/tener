@@ -1,0 +1,32 @@
+-DOCSTART- -X- -X- O
+
+one NN B-NP O
+two : O O
+three NNP B-NP B-LOC
+four VB B-VP O
+five NNP B-NP O
+six NNP I-NP O
+, , O O
+Seven NNP B-NP B-PER
+eight IN B-PP O
+nine DT B-NP O
+Ten NN I-NP O
+. . O O
+
+-DOCSTART- -X- -X- O
+
+One NNP B-NP B-PER
+Four NNP I-NP I-PER
+seven NNP I-NP O
+Eight NNP I-NP O
+nine NNP I-NP O
+ten NN I-NP O
+
+-DOCSTART- -X- -X- O
+
+Five NNP B-NP B-LOC
+, , O O
+Six NNP B-NP B-LOC
+seven NNP I-NP I-LOC
+eight NNPS I-NP I-LOC
+nine CD I-NP O

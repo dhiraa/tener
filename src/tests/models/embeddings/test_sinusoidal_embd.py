@@ -14,26 +14,33 @@ import torch
 
 class TestSinusoidalPositionalEmbedding(tf.test.TestCase):
     def test_sin_naive(self):
-        embd = SinusoidalPositionalEmbeddingNaive(maximum_position_encoding=5, d_model=16)
+        embedding_size = 16
+        embd = SinusoidalPositionalEmbeddingNaive(maximum_position_encoding=5, d_model=embedding_size)
         tensor = tf.convert_to_tensor([[1, 2, 3], [2, 3, 1]])
         embd = embd(tensor)
-        print_info("T2T: TestSinusoidalPositionalEmbeddingNaive shape: {}".format(embd.shape))
+        # print_info("T2T: TestSinusoidalPositionalEmbeddingNaive shape: {}".format(embd.shape))
+        assert embd.shape == (1, tensor.shape[1], embedding_size)
 
     def test_sin_tener(self):
-        embd = SinusoidalPositionalEmbedding(embedding_dim=16, padding_idx=0)
+        embedding_size = 16
+        embd = SinusoidalPositionalEmbedding(embedding_dim=embedding_size, padding_idx=0)
         tensor = tf.convert_to_tensor([[1, 2, 3], [2, 3, 1]])
         embd = embd(tensor)
-        print_info("SinusoidalPositionalEmbedding shape: {}".format(embd.shape))
+        # print_info("SinusoidalPositionalEmbedding shape: {}".format(embd.shape))
+        assert embd.shape == (tensor.shape[0], tensor.shape[1], embedding_size)
 
     def test_learned_pos_embd_tener(self):
-        embd = LearnedPositionalEmbedding(embedding_dim=16, padding_idx=0, num_embeddings=5)
+        embedding_size = 16
+        embd = LearnedPositionalEmbedding(embedding_dim=embedding_size, padding_idx=0, num_embeddings=5)
         tensor = tf.convert_to_tensor([[1, 2, 3], [2, 3, 1]])
         embd = embd(tensor)
-        print_info("LearnedPositionalEmbedding shape: {}".format(embd.shape))
-
+        # print_info("LearnedPositionalEmbedding shape: {}".format(embd.shape))
+        assert embd.shape == (tensor.shape[0], tensor.shape[1], embedding_size)
 
     def test_sin_torch(self):
+        embedding_size = 16
         embd_torch = SinusoidalPositionalEmbeddingTorch(embedding_dim=16, padding_idx=0)
         tensor = torch.tensor([[1, 2, 3], [2, 3, 1]])
         embd_torch = embd_torch(tensor)
-        print_info("Torch: SinusoidalPositionalEmbeddingTorch shape: {}".format(embd_torch.shape))
+        # print_info("Torch: SinusoidalPositionalEmbeddingTorch shape: {}".format(embd_torch.shape))
+        assert embd_torch.shape == (tensor.shape[0], tensor.shape[1], embedding_size)

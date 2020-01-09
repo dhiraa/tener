@@ -26,9 +26,10 @@ class TestTransformerCharEncoding(tf.test.TestCase):
         char_data = [text.split(" ") for text in text_data]
 
         MAX_SEQ_LENGTH = 12
+        EMBEDDIND_SIZE = 4 * 8
         char_data_encoded = []
         for char_seq in char_data:
-            print_info(">>> {}".format(len(char_seq)))
+            # print_info(">>> {}".format(len(char_seq)))
             # get_keras_tokenizer each sentence
             res = text_char_tonkenizer.texts_to_sequences(char_seq)
             # pad it
@@ -40,17 +41,19 @@ class TestTransformerCharEncoding(tf.test.TestCase):
             char_data_encoded.append(res)
 
         vocab = list(text_char_tonkenizer.index_word.values())
-        print_info(vocab)
+        # print_info(vocab)
 
-        encoder = TransformerCharEncoding(char_emd_dim=4*8,
+        encoder = TransformerCharEncoding(char_emd_dim=EMBEDDIND_SIZE,
                                           len_char_vocab=len(vocab)+1,
-                                          d_model=4 * 8,
+                                          d_model=EMBEDDIND_SIZE,
                                           target_vocab_size=len(vocab))
 
         char_data_encoded = np.array(char_data_encoded)
-        print_info(char_data_encoded.shape)
+        # print_info(char_data_encoded.shape)
         char_data_encoded = tf.convert_to_tensor(char_data_encoded)
         # mask = create_padding_mask(char_data_encoded)
         encoded = encoder(char_data_encoded)
 
-        print_info("TestTransformerCharEncoding {}".format(encoded.shape))
+        # print_info("TestTransformerCharEncoding {}".format(encoded.shape))
+
+        assert encoded.shape == (len(text_data), MAX_SEQ_LENGTH, EMBEDDIND_SIZE)
