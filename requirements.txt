@@ -1,4 +1,4 @@
-mlflow==1.4.0
+mlflow==1.23.1
 tensorflow_gpu==2.0
 gin-config==0.2.1
 pytest==4.4.0
